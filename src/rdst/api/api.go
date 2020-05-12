@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
@@ -12,10 +11,15 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/rs/xid"
+	log "github.com/sirupsen/logrus"
 )
 
-var err error
-var errstrings []string
+var (
+	getCurrentTime string
+	getUUID        string
+	errstrings     []string
+	err            error
+)
 
 // BodyRequest requested json file
 type BodyRequest struct {
@@ -24,78 +28,50 @@ type BodyRequest struct {
 }
 
 // GetCurrentTime get the current time
-func GetCurrentTime() (t string) {
+func GetCurrentTime() (getCurrentTime string) {
 	const (
 		layoutISO = "2006-01-02 15:04:05.000000"
 	)
-	currentTime := time.Now()
-	n := currentTime.Format(layoutISO)
-	fmt.Println(n)
-	return n
+	getCurrentTime = time.Now().Format(layoutISO)
+	log.Info("Fetched current time!")
+	return getCurrentTime
 }
 
 // GetUUID - Use as primary key
-func GetUUID() (u string) {
-	id := xid.New()
-	return id.String()
+func GetUUID() (getUUID string) {
+	getUUID = xid.New().String()
+	log.Info("Fetched UUID!")
+	return getUUID
 }
 
 // ActionDBInstance stops the DB instances
-func ActionDBInstance(i string, t string) (e error) {
-	svc := rds.New(session.New())
-	GT := GetCurrentTime()
-	GU := GetUUID()
-	var s string
+func ActionDBInstance(instanceID string, actionType string) (e error) {
+	rdssvc := rds.New(session.New())
+	getCurrentTime = GetCurrentTime()
+	getUUID = GetUUID()
+	log.SetFormatter(&log.JSONFormatter{})
 
-	switch t {
+	switch actionType {
 	case "stop":
 		input := &rds.StopDBInstanceInput{
-			DBInstanceIdentifier: &i,
+			DBInstanceIdentifier: &instanceID,
 		}
-		result, err := svc.StopDBInstance(input)
-		fmt.Println("Stopping DB instance - ", i)
-		if err == nil {
-			s = "stopped"
-			fmt.Println(result, "\n [Stopped]: Putting Item..", t)
-			InputItem := dydb.Item{
-				UUID:         GU,
-				DbIdentifier: i,
-				Status:       s,
-				CreatedAt:    GT,
-				Error:        err.Error(),
-			}
-			dydb.PutItem(InputItem)
-			fmt.Println("[Stopped]: Finished putting item...")
-		} else {
-			fmt.Println(err)
-		}
-		return err
+		_, err := rdssvc.StopDBInstance(input)
 
-	case "start":
-		input := &rds.StartDBInstanceInput{
-			DBInstanceIdentifier: &i,
+		inputItem := dydb.Item{
+			UUID:         getUUID,
+			DbIdentifier: instanceID,
+			Status:       actionType,
+			CreatedAt:    getCurrentTime,
+			Error:        err.Error(),
 		}
-		result, err := svc.StartDBInstance(input)
-		fmt.Println("Starting DB instance - ", i)
-		if err == nil {
-			s = "started"
-			fmt.Println(result, "\n [Started]: Putting Item..", t)
-			InputItem := dydb.Item{
-				UUID:         GU,
-				DbIdentifier: i,
-				Status:       s,
-				CreatedAt:    GT,
-				Error:        err.Error(),
-			}
-			dydb.PutItem(InputItem)
-			fmt.Println("[Started]: Finished putting item...")
-		} else {
-			fmt.Println(err)
-		}
+
+		dydb.PutItem(inputItem)
+		log.Info("after put item")
 		return err
 
 	default:
-		fmt.Println("[Error]: Instance Request Type doesn't match - ", t)
+		log.Info("[Info]: actionType doesn't match - ", actionType)
 		return err
 	}
 }
@@ -104,14 +80,20 @@ func ActionDBInstance(i string, t string) (e error) {
 func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 
 	var bodyRequest BodyRequest
+	log.SetFormatter(&log.JSONFormatter{})
 
 	err := json.Unmarshal([]byte(request.Body), &bodyRequest)
 	if err != nil {
-		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 404}, nil
+		log.Error("Unable to unmarshal JSON", err)
+		log.WithFields(log.Fields{
+			"input": []byte(request.Body),
+		}).Error("JSON unmarshal error!")
+
+		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 405}, nil
 	}
 
-	for _, el := range bodyRequest.Values {
-		err := ActionDBInstance(el, bodyRequest.Type)
+	for _, instanceID := range bodyRequest.Values {
+		err = ActionDBInstance(instanceID, bodyRequest.Type)
 		if err != nil {
 			errstrings = append(errstrings, err.Error())
 		}
@@ -119,7 +101,7 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
 	if errstrings != nil {
 		errstring := strings.Join(errstrings, " ")
-		return events.APIGatewayProxyResponse{Body: errstring, StatusCode: 408}, nil
+		return events.APIGatewayProxyResponse{Body: errstring, StatusCode: 406}, nil
 	}
 
 	return events.APIGatewayProxyResponse{Body: string(bodyRequest.Type), StatusCode: 200}, nil
