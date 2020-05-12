@@ -1,0 +1,157 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  ParamProjectID:
+    Type: String
+  ParamProjectEnviron:
+    Type: String
+
+Globals:
+    Function:
+      Runtime: go1.x
+      Timeout: 20
+    Api:
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'content-type'"
+        AllowOrigin: "'*'"
+        AllowCredentials: "'*'"
+
+Resources:
+  APIGateway1:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub '${ParamProjectID}'
+      StageName: !Ref ParamProjectEnviron
+      MethodSettings:
+        - LoggingLevel: INFO
+          ResourcePath: '/*' 
+          HttpMethod: '*' 
+          DataTraceEnabled: true  
+          MetricsEnabled: true   
+      Auth:
+        DefaultAuthorizer: BasicAuthorizer
+        Authorizers:
+          BasicAuthorizer:
+            FunctionArn: !GetAtt FuncAuth.Arn
+            Identity:
+              Header: Authorization
+              ValidationExpression: ^[Bb]eer [-0-9a-zA-z\.]*$
+              ReauthorizeEvery: 60
+
+  FuncAuth:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ParamProjectID}-auth'
+      Role: !GetAtt Role1.Arn
+      Handler: src/rdst/bin/auth
+      Runtime: go1.x
+      Tracing: Active
+      Policies:
+        - Ref: ManagedPolicy1
+
+  Func1:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ParamProjectID}-rdstl'
+      Role: !GetAtt Role1.Arn
+      Handler: src/rdst/bin/rdst
+      Runtime: go1.x
+      Tracing: Active
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref APIGateway1
+            Path: /rdst/{id}
+            Method: GET
+
+  Func2:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ParamProjectID}-rdstw'
+      Role: !GetAtt Role1.Arn
+      Handler: src/rdst/bin/rdst
+      Runtime: go1.x
+      Tracing: Active
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref APIGateway1
+            Path: /rdst/action
+            Method: POST
+
+  ManagedPolicy1:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub '${ParamProjectID}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          -
+            Sid: AllowCloudwatchAccess
+            Effect: Allow
+            Action:
+              - logs:*
+            Resource: "*"
+          -
+            Sid: AllowLambdaAccess
+            Effect: Allow
+            Action:
+              - lambda:*
+            Resource: "*"
+          -
+            Sid: AllowXrayAccess
+            Effect: Allow
+            Action:
+              - xray:*
+            Resource: "*"
+          -
+            Sid: RDSaccess
+            Effect: Allow
+            Action:
+              - rds:Start*
+              - rds:Stop*
+              - rds:Describe*
+              - rds:Get*
+            Resource: "*"
+          -
+            Sid: DynamoDBAccess
+            Effect: Allow
+            Action:
+              - dynamodb:*
+            Resource: "*"
+
+  Role1:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub '${ParamProjectID}-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+                - lambda.amazonaws.com
+                - apigateway.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - !Ref ManagedPolicy1            
+
+Outputs:
+  URL:
+    Description: URL for HTTPS Endpoint
+    Value:
+      Fn::Join:
+        - ''
+        - - https://
+          - Ref: APIGateway1
+          - ".execute-api."
+          - Ref: AWS::Region
+          - ".amazonaws.com/"
+          - Ref: ParamProjectEnviron
