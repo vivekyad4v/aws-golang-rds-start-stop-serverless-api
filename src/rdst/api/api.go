@@ -139,6 +139,20 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 					log.Error("unable to stopall instance Error - ", i, err)
 					actionType = "stopall-error"
 				}
+				inputItem := dydb.Item{
+					UUID:         getUUID,
+					DbIdentifier: i,
+					Status:       actionType,
+					CreatedAt:    getCurrentTime,
+					Error:        err.Error(),
+				}
+				err = dydb.PutItem(inputItem)
+				if err != nil {
+					log.Error("unable to put item Error - ", instanceID, err)
+					log.WithFields(log.Fields{
+						"input": inputItem,
+					}).Error("unable to put item Error!")
+				}
 			}
 		}
 
@@ -166,6 +180,7 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 
 			log.Info("Instance list to action - ", listInstanceIDs)
 			for _, i := range listInstanceIDs {
+				log.Info("loop started")
 				input := &rds.StartDBInstanceInput{
 					DBInstanceIdentifier: &i,
 				}
@@ -174,23 +189,21 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 					log.Error("unable to startall instance Error - ", i, err)
 					actionType = "startall-error"
 				}
+				inputItem := dydb.Item{
+					UUID:         getUUID,
+					DbIdentifier: i,
+					Status:       actionType,
+					CreatedAt:    getCurrentTime,
+					Error:        err.Error(),
+				}
+				err = dydb.PutItem(inputItem)
+				if err != nil {
+					log.Error("unable to put item Error - ", instanceID, err)
+					log.WithFields(log.Fields{
+						"input": inputItem,
+					}).Error("unable to put item Error!")
+				}
 			}
-		}
-
-		inputItem := dydb.Item{
-			UUID:         getUUID,
-			DbIdentifier: instanceID,
-			Status:       actionType,
-			CreatedAt:    getCurrentTime,
-			Error:        err.Error(),
-		}
-
-		err = dydb.PutItem(inputItem)
-		if err != nil {
-			log.Error("unable to put item Error - ", instanceID, err)
-			log.WithFields(log.Fields{
-				"input": inputItem,
-			}).Error("unable to put item Error!")
 		}
 
 	default:
