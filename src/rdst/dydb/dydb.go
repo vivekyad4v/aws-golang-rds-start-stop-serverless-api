@@ -1,12 +1,11 @@
 package dydb
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	log "github.com/sirupsen/logrus"
 )
 
 // Item struct for DB actions
@@ -19,7 +18,7 @@ type Item struct {
 }
 
 // PutItem in dynamodb table
-func PutItem(i Item) {
+func PutItem(i Item) (Error error) {
 
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
@@ -27,20 +26,21 @@ func PutItem(i Item) {
 	db := dynamodb.New(sess)
 
 	ItemAVMap, err := dynamodbattribute.MarshalMap(i)
-
 	if err != nil {
-		fmt.Printf("Marshalling: ERROR: %v\n", err.Error())
+		log.Error("Marshalling: ERROR: ", err)
+		return err
 	}
 
 	params := &dynamodb.PutItemInput{
 		TableName: aws.String("happay-dev-rdst-tbl"),
 		Item:      ItemAVMap,
 	}
-
 	_, err = db.PutItem(params)
 	if err != nil {
-		fmt.Printf("Put item: ERROR: %v\n", err.Error())
+		log.Error("Unable to put item: ERROR: ", err)
+		return err
 	}
 
-	fmt.Println("Put item: Success")
+	log.Info("Put item: Success")
+	return err
 }

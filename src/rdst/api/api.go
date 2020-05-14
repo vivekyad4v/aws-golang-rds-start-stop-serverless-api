@@ -33,30 +33,42 @@ func GetCurrentTime() (getCurrentTime string) {
 		layoutISO = "2006-01-02 15:04:05.000000"
 	)
 	getCurrentTime = time.Now().Format(layoutISO)
-	log.Info("Fetched current time!")
 	return getCurrentTime
 }
 
 // GetUUID - Use as primary key
 func GetUUID() (getUUID string) {
 	getUUID = xid.New().String()
-	log.Info("Fetched UUID!")
 	return getUUID
 }
 
 // ActionDBInstance stops the DB instances
-func ActionDBInstance(instanceID string, actionType string) (e error) {
+func ActionDBInstance(instanceID string, actionType string) (Error error) {
 	rdssvc := rds.New(session.New())
 	getCurrentTime = GetCurrentTime()
 	getUUID = GetUUID()
 	log.SetFormatter(&log.JSONFormatter{})
 
 	switch actionType {
-	case "stop":
-		input := &rds.StopDBInstanceInput{
-			DBInstanceIdentifier: &instanceID,
+	case "stop", "start":
+		if actionType == "stop" {
+			input := &rds.StopDBInstanceInput{
+				DBInstanceIdentifier: &instanceID,
+			}
+			_, err = rdssvc.StopDBInstance(input)
+			if err != nil {
+				log.Error("unable to stop instance Error - ", instanceID, err)
+			}
 		}
-		_, err := rdssvc.StopDBInstance(input)
+		if actionType == "start" {
+			input := &rds.StartDBInstanceInput{
+				DBInstanceIdentifier: &instanceID,
+			}
+			_, err = rdssvc.StartDBInstance(input)
+			if err != nil {
+				log.Error("unable to start instance Error - ", instanceID, err)
+			}
+		}
 
 		inputItem := dydb.Item{
 			UUID:         getUUID,
@@ -66,14 +78,19 @@ func ActionDBInstance(instanceID string, actionType string) (e error) {
 			Error:        err.Error(),
 		}
 
-		dydb.PutItem(inputItem)
-		log.Info("after put item")
-		return err
+		err := dydb.PutItem(inputItem)
+		if err != nil {
+			log.Error("unable to put item Error - ", instanceID, err)
+			log.WithFields(log.Fields{
+				"input": inputItem,
+			}).Error("JSON unmarshal error!")
+		}
 
 	default:
 		log.Info("[Info]: actionType doesn't match - ", actionType)
-		return err
 	}
+
+	return err
 }
 
 // Handler API Gateway request
@@ -93,7 +110,7 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 
 	for _, instanceID := range bodyRequest.Values {
-		err = ActionDBInstance(instanceID, bodyRequest.Type)
+		err := ActionDBInstance(instanceID, bodyRequest.Type)
 		if err != nil {
 			errstrings = append(errstrings, err.Error())
 		}
