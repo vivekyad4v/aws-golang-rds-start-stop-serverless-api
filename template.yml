@@ -10,7 +10,7 @@ Parameters:
 Globals:
     Function:
       Runtime: go1.x
-      Timeout: 20
+      Timeout: 60
     Api:
       Cors:
         AllowMethods: "'GET,POST,OPTIONS'"

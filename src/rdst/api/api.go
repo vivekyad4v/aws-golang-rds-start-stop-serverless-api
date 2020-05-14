@@ -54,8 +54,21 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 
 	switch actionType {
 
-	case "stop", "start", "stopall", "startall":
-		if actionType == "stop" {
+	case "stop", "start":
+
+		setEngine = "postgres"
+		input := &rds.DescribeDBInstancesInput{
+			DBInstanceIdentifier: &instanceID,
+		}
+		result, err := rdssvc.DescribeDBInstances(input)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"input": result,
+			}).Info("Engine type doesn't exists, set type - aurora")
+			setEngine = "aurora"
+		}
+
+		if actionType == "stop" && setEngine == "postgres" {
 			input := &rds.StopDBInstanceInput{
 				DBInstanceIdentifier: &instanceID,
 			}
@@ -66,7 +79,7 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 			}
 		}
 
-		if actionType == "start" {
+		if actionType == "start" && setEngine == "postgres" {
 			input := &rds.StartDBInstanceInput{
 				DBInstanceIdentifier: &instanceID,
 			}
@@ -77,6 +90,23 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 			}
 		}
 
+		inputItem := dydb.Item{
+			UUID:         getUUID,
+			DbIdentifier: instanceID,
+			Status:       actionType,
+			CreatedAt:    getCurrentTime,
+			Error:        err.Error(),
+		}
+
+		err = dydb.PutItem(inputItem)
+		if err != nil {
+			log.Error("unable to put item Error - ", instanceID, err)
+			log.WithFields(log.Fields{
+				"input": inputItem,
+			}).Error("unable to put item Error!")
+		}
+
+	case "stopall", "startall":
 		if actionType == "stopall" {
 			setEngine = "postgres"
 			input := &rds.DescribeDBInstancesInput{
@@ -155,12 +185,12 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 			Error:        err.Error(),
 		}
 
-		err := dydb.PutItem(inputItem)
+		err = dydb.PutItem(inputItem)
 		if err != nil {
 			log.Error("unable to put item Error - ", instanceID, err)
 			log.WithFields(log.Fields{
 				"input": inputItem,
-			}).Error("JSON unmarshal error!")
+			}).Error("unable to put item Error!")
 		}
 
 	default:
