@@ -17,7 +17,9 @@ run-local:
 		--template $(FILE_TEMPLATE) \
 		--parameter-overrides \
 			"ParameterKey=ParamProjectID,ParameterValue=$(PROJECT_ID) \
-			 ParameterKey=ParamProjectEnviron,ParameterValue=$(ENVIRON)"
+			 ParameterKey=ParamProjectEnviron,ParameterValue=$(ENVIRON) \
+			 ParameterKey=ParamProjectOrgID,ParameterValue=$(ORG_ID) \
+			 ParameterKey=ParamProjectName,ParameterValue=$(PROJECT_NAME)"
 
 package:
 	@ mkdir -p dist
@@ -40,7 +42,9 @@ deploy:
 		--stack-name $(PROJECT_ID) \
 		--parameter-overrides \
 			ParamProjectID=$(PROJECT_ID) \
-			ParamProjectEnviron=$(ENVIRON)
+			ParamProjectEnviron=$(ENVIRON) \
+			ParamProjectOrgID=$(ORG_ID) \
+			ParamProjectName=$(PROJECT_NAME)
 
 describe:
 	@ aws cloudformation describe-stacks \

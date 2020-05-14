@@ -6,11 +6,21 @@ Parameters:
     Type: String
   ParamProjectEnviron:
     Type: String
+  ParamProjectOrgID:
+    Type: String
+  ParamProjectName:
+    Type: String
 
 Globals:
     Function:
       Runtime: go1.x
       Timeout: 120
+      Environment:
+        Variables:
+          PROJECT_ID: !Ref ParamProjectID
+          ENVIRON: !Ref ParamProjectEnviron
+          ORG_ID: !Ref ParamProjectOrgID
+          PROJECT_NAME: !Ref ParamProjectName
     Api:
       Cors:
         AllowMethods: "'GET,POST,OPTIONS'"

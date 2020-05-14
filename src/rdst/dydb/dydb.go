@@ -1,6 +1,8 @@
 package dydb
 
 import (
+	"rdst/utils"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -25,6 +27,13 @@ func PutItem(i Item) (Error error) {
 	}))
 	db := dynamodb.New(sess)
 
+	tableName, err := utils.GetParameterValue("dydb-table-name")
+
+	if err != nil {
+		log.Error("Unable to fetch Dydb table ", tableName, err)
+		return err
+	}
+
 	ItemAVMap, err := dynamodbattribute.MarshalMap(i)
 	if err != nil {
 		log.Error("Marshalling: ERROR: ", err)
@@ -32,7 +41,7 @@ func PutItem(i Item) (Error error) {
 	}
 
 	params := &dynamodb.PutItemInput{
-		TableName: aws.String("happay-dev-rdst-tbl"),
+		TableName: aws.String(tableName),
 		Item:      ItemAVMap,
 	}
 	_, err = db.PutItem(params)
