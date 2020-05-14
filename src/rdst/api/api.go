@@ -48,13 +48,13 @@ func GetUUID() (getUUID string) {
 // ActionDBInstance stops the DB instances
 func ActionDBInstance(instanceID string, actionType string) (Error error) {
 	rdssvc := rds.New(session.New())
-	getCurrentTime = GetCurrentTime()
-	getUUID = GetUUID()
 	log.SetFormatter(&log.JSONFormatter{})
 
 	switch actionType {
 
 	case "stop", "start":
+		getCurrentTime = GetCurrentTime()
+		getUUID = GetUUID()
 
 		setEngine = "postgres"
 		input := &rds.DescribeDBInstancesInput{
@@ -131,6 +131,8 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 
 			log.Info("Instance list to action - ", listInstanceIDs)
 			for _, i := range listInstanceIDs {
+				getCurrentTime = GetCurrentTime()
+				getUUID = GetUUID()
 				input := &rds.StopDBInstanceInput{
 					DBInstanceIdentifier: &i,
 				}
@@ -180,7 +182,8 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 
 			log.Info("Instance list to action - ", listInstanceIDs)
 			for _, i := range listInstanceIDs {
-				log.Info("loop started")
+				getCurrentTime = GetCurrentTime()
+				getUUID = GetUUID()
 				input := &rds.StartDBInstanceInput{
 					DBInstanceIdentifier: &i,
 				}
