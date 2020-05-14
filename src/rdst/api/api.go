@@ -8,6 +8,7 @@ import (
 	"rdst/dydb"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/rs/xid"
@@ -15,10 +16,12 @@ import (
 )
 
 var (
-	getCurrentTime string
-	getUUID        string
-	errstrings     []string
-	err            error
+	getCurrentTime  string
+	getUUID         string
+	errstrings      []string
+	err             error
+	listInstanceIDs []string
+	setEngine       string
 )
 
 // BodyRequest requested json file
@@ -50,7 +53,8 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 	log.SetFormatter(&log.JSONFormatter{})
 
 	switch actionType {
-	case "stop", "start":
+
+	case "stop", "start", "stopall", "startall":
 		if actionType == "stop" {
 			input := &rds.StopDBInstanceInput{
 				DBInstanceIdentifier: &instanceID,
@@ -58,8 +62,10 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 			_, err = rdssvc.StopDBInstance(input)
 			if err != nil {
 				log.Error("unable to stop instance Error - ", instanceID, err)
+				actionType = "stop-error"
 			}
 		}
+
 		if actionType == "start" {
 			input := &rds.StartDBInstanceInput{
 				DBInstanceIdentifier: &instanceID,
@@ -67,6 +73,77 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 			_, err = rdssvc.StartDBInstance(input)
 			if err != nil {
 				log.Error("unable to start instance Error - ", instanceID, err)
+				actionType = "start-error"
+			}
+		}
+
+		if actionType == "stopall" {
+			setEngine = "postgres"
+			input := &rds.DescribeDBInstancesInput{
+				Filters: []*rds.Filter{
+					{
+						Name: aws.String("engine"),
+						Values: []*string{
+							aws.String(setEngine),
+						},
+					},
+				},
+			}
+			result, err := rdssvc.DescribeDBInstances(input)
+			if err != nil {
+				log.Error("unable to fetch all instances - ", instanceID, err)
+				actionType = "stopall-error"
+			}
+
+			for _, i := range result.DBInstances {
+				listInstanceIDs = append(listInstanceIDs, *i.DBInstanceIdentifier)
+			}
+
+			log.Info("Instance list to action - ", listInstanceIDs)
+			for _, i := range listInstanceIDs {
+				input := &rds.StopDBInstanceInput{
+					DBInstanceIdentifier: &i,
+				}
+				_, err = rdssvc.StopDBInstance(input)
+				if err != nil {
+					log.Error("unable to stopall instance Error - ", i, err)
+					actionType = "stopall-error"
+				}
+			}
+		}
+
+		if actionType == "startall" {
+			setEngine = "postgres"
+			input := &rds.DescribeDBInstancesInput{
+				Filters: []*rds.Filter{
+					{
+						Name: aws.String("engine"),
+						Values: []*string{
+							aws.String(setEngine),
+						},
+					},
+				},
+			}
+			result, err := rdssvc.DescribeDBInstances(input)
+			if err != nil {
+				log.Error("unable to fetch all instances - ", instanceID, err)
+				actionType = "startall-error"
+			}
+
+			for _, i := range result.DBInstances {
+				listInstanceIDs = append(listInstanceIDs, *i.DBInstanceIdentifier)
+			}
+
+			log.Info("Instance list to action - ", listInstanceIDs)
+			for _, i := range listInstanceIDs {
+				input := &rds.StartDBInstanceInput{
+					DBInstanceIdentifier: &i,
+				}
+				_, err = rdssvc.StartDBInstance(input)
+				if err != nil {
+					log.Error("unable to startall instance Error - ", i, err)
+					actionType = "startall-error"
+				}
 			}
 		}
 
