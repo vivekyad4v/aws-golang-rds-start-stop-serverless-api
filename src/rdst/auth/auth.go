@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"strings"
 
+	"rdst/utils"
+
 	"github.com/aws/aws-lambda-go/events"
+	log "github.com/sirupsen/logrus"
 )
 
 // Help function to generate an IAM policy
@@ -34,8 +37,16 @@ func handler(ctx context.Context, event events.APIGatewayCustomAuthorizerRequest
 	token := event.AuthorizationToken
 	fmt.Println("Validating token...")
 
+	getServerAuthToken, err := utils.GetParameterValue("authorization-token")
+
+	if err != nil {
+		log.Error("Unable to fetch server auth token", err)
+	}
+
+	getServerAuthToken = "beer " + getServerAuthToken
+
 	switch strings.ToLower(token) {
-	case "beer vyvek":
+	case getServerAuthToken:
 		return generatePolicy("user", "Allow", event.MethodArn), nil
 	case "deny":
 		return generatePolicy("user", "Deny", event.MethodArn), nil
