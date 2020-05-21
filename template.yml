@@ -48,7 +48,7 @@ Resources:
             Identity:
               Header: Authorization
               ValidationExpression: ^[Bb]eer [-0-9a-zA-z\.]*$
-              ReauthorizeEvery: 60
+              ReauthorizeEvery: 10
 
   FuncAuth:
     Type: AWS::Serverless::Function

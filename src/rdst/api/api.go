@@ -65,8 +65,8 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 		if err != nil {
 			log.WithFields(log.Fields{
 				"input": result,
-			}).Info("Engine type doesn't exists, set type - aurora")
-			setEngine = "aurora"
+			}).Info("Engine type doesn't exists, set type - aurora-postgresql")
+			setEngine = "aurora-postgresql"
 		}
 
 		if actionType == "stop" && setEngine == "postgres" {
@@ -91,7 +91,7 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 			}
 		}
 
-		if actionType == "stop" && setEngine == "aurora" {
+		if actionType == "stop" && setEngine == "aurora-postgresql" {
 			input := &rds.StopDBClusterInput{
 				DBClusterIdentifier: &instanceID,
 			}
@@ -102,7 +102,7 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 			}
 		}
 
-		if actionType == "start" && setEngine == "aurora" {
+		if actionType == "start" && setEngine == "aurora-postgresql" {
 			input := &rds.StartDBClusterInput{
 				DBClusterIdentifier: &instanceID,
 			}
@@ -166,16 +166,19 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 					DBInstanceIdentifier: &i,
 				}
 				_, err = rdssvc.StopDBInstance(input)
+				setError := "NIL"
 				if err != nil {
 					log.Error("unable to stopall instance Error - ", i, err)
 					actionType = "stopall-error"
+					setError = err.Error()
 				}
+
 				inputItem := dydb.Item{
 					UUID:         getUUID,
 					DbIdentifier: i,
 					Status:       actionType,
 					CreatedAt:    getCurrentTime,
-					Error:        err.Error(),
+					Error:        setError,
 				}
 				err = dydb.PutItem(inputItem)
 				if err != nil {
@@ -186,8 +189,8 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 				}
 			}
 
-			// AURORA ACTION
-			setEngine = "aurora"
+			// aurora-postgresql ACTION
+			setEngine = "aurora-postgresql"
 			inputa := &rds.DescribeDBClustersInput{
 				Filters: []*rds.Filter{
 					{
@@ -215,16 +218,18 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 					DBClusterIdentifier: &i,
 				}
 				_, err = rdssvc.StopDBCluster(input)
+				setError := "NIL"
 				if err != nil {
 					log.Error("unable to stopall cluster Error - ", i, err)
 					actionType = "stopall-error"
+					setError = err.Error()
 				}
 				inputItem := dydb.Item{
 					UUID:         getUUID,
 					DbIdentifier: i,
 					Status:       actionType,
 					CreatedAt:    getCurrentTime,
-					Error:        err.Error(),
+					Error:        setError,
 				}
 				err = dydb.PutItem(inputItem)
 				if err != nil {
@@ -266,16 +271,18 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 					DBInstanceIdentifier: &i,
 				}
 				_, err = rdssvc.StartDBInstance(input)
+				setError := "NIL"
 				if err != nil {
 					log.Error("unable to startall instance Error - ", i, err)
 					actionType = "startall-error"
+					setError = err.Error()
 				}
 				inputItem := dydb.Item{
 					UUID:         getUUID,
 					DbIdentifier: i,
 					Status:       actionType,
 					CreatedAt:    getCurrentTime,
-					Error:        err.Error(),
+					Error:        setError,
 				}
 				err = dydb.PutItem(inputItem)
 				if err != nil {
@@ -286,8 +293,8 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 				}
 			}
 
-			// AURORA ACTION
-			setEngine = "aurora"
+			// aurora-postgresql ACTION
+			setEngine = "aurora-postgresql"
 			inputa := &rds.DescribeDBClustersInput{
 				Filters: []*rds.Filter{
 					{
@@ -315,16 +322,18 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 					DBClusterIdentifier: &i,
 				}
 				_, err = rdssvc.StartDBCluster(input)
+				setError := "NIL"
 				if err != nil {
 					log.Error("unable to Startall cluster Error - ", i, err)
 					actionType = "Startall-error"
+					setError = err.Error()
 				}
 				inputItem := dydb.Item{
 					UUID:         getUUID,
 					DbIdentifier: i,
 					Status:       actionType,
 					CreatedAt:    getCurrentTime,
-					Error:        err.Error(),
+					Error:        setError,
 				}
 				err = dydb.PutItem(inputItem)
 				if err != nil {

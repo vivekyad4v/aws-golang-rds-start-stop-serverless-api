@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"rdst/utils"
 
@@ -45,7 +44,9 @@ func handler(ctx context.Context, event events.APIGatewayCustomAuthorizerRequest
 
 	getServerAuthToken = "beer " + getServerAuthToken
 
-	switch strings.ToLower(token) {
+	log.Info(getServerAuthToken, " ", token)
+
+	switch token {
 	case getServerAuthToken:
 		return generatePolicy("user", "Allow", event.MethodArn), nil
 	case "deny":
@@ -53,6 +54,6 @@ func handler(ctx context.Context, event events.APIGatewayCustomAuthorizerRequest
 	case "unauthorized":
 		return events.APIGatewayCustomAuthorizerResponse{}, errors.New("Unauthorized") // Return a 401 Unauthorized response
 	default:
-		return events.APIGatewayCustomAuthorizerResponse{}, errors.New("Error: Invalid token")
+		return events.APIGatewayCustomAuthorizerResponse{}, errors.New("Unauthorized")
 	}
 }
