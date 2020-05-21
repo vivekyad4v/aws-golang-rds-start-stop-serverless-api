@@ -21,6 +21,7 @@ var (
 	errstrings      []string
 	err             error
 	listInstanceIDs []string
+	listClusterIDs  []string
 	setEngine       string
 )
 
@@ -90,12 +91,39 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 			}
 		}
 
+		if actionType == "stop" && setEngine == "aurora" {
+			input := &rds.StopDBClusterInput{
+				DBClusterIdentifier: &instanceID,
+			}
+			_, err = rdssvc.StopDBCluster(input)
+			if err != nil {
+				log.Error("unable to stop cluster Error - ", instanceID, err)
+				actionType = "stop-error"
+			}
+		}
+
+		if actionType == "start" && setEngine == "aurora" {
+			input := &rds.StartDBClusterInput{
+				DBClusterIdentifier: &instanceID,
+			}
+			_, err = rdssvc.StartDBCluster(input)
+			if err != nil {
+				log.Error("unable to start cluster Error - ", instanceID, err)
+				actionType = "start-error"
+			}
+		}
+
+		setError := "NIL"
+		if err != nil {
+			setError = err.Error()
+		}
+
 		inputItem := dydb.Item{
 			UUID:         getUUID,
 			DbIdentifier: instanceID,
 			Status:       actionType,
 			CreatedAt:    getCurrentTime,
-			Error:        err.Error(),
+			Error:        setError,
 		}
 
 		err = dydb.PutItem(inputItem)
@@ -108,6 +136,7 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 
 	case "stopall", "startall":
 		if actionType == "stopall" {
+			// POSTGRES ACTION
 			setEngine = "postgres"
 			input := &rds.DescribeDBInstancesInput{
 				Filters: []*rds.Filter{
@@ -150,7 +179,56 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 				}
 				err = dydb.PutItem(inputItem)
 				if err != nil {
-					log.Error("unable to put item Error - ", instanceID, err)
+					log.Error("unable to put item Error - ", i, err)
+					log.WithFields(log.Fields{
+						"input": inputItem,
+					}).Error("unable to put item Error!")
+				}
+			}
+
+			// AURORA ACTION
+			setEngine = "aurora"
+			inputa := &rds.DescribeDBClustersInput{
+				Filters: []*rds.Filter{
+					{
+						Name: aws.String("engine"),
+						Values: []*string{
+							aws.String(setEngine),
+						},
+					},
+				},
+			}
+			resulta, err := rdssvc.DescribeDBClusters(inputa)
+			if err != nil {
+				log.Error("unable to fetch all instances - ", instanceID, err)
+				actionType = "stopall-error"
+			}
+			for _, i := range resulta.DBClusters {
+				listClusterIDs = append(listInstanceIDs, *i.DBClusterIdentifier)
+			}
+
+			log.Info("Clusters list to action - ", listClusterIDs)
+			for _, i := range listClusterIDs {
+				getCurrentTime = GetCurrentTime()
+				getUUID = GetUUID()
+				input := &rds.StopDBClusterInput{
+					DBClusterIdentifier: &i,
+				}
+				_, err = rdssvc.StopDBCluster(input)
+				if err != nil {
+					log.Error("unable to stopall cluster Error - ", i, err)
+					actionType = "stopall-error"
+				}
+				inputItem := dydb.Item{
+					UUID:         getUUID,
+					DbIdentifier: i,
+					Status:       actionType,
+					CreatedAt:    getCurrentTime,
+					Error:        err.Error(),
+				}
+				err = dydb.PutItem(inputItem)
+				if err != nil {
+					log.Error("unable to put item Error - ", i, err)
 					log.WithFields(log.Fields{
 						"input": inputItem,
 					}).Error("unable to put item Error!")
@@ -202,6 +280,55 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 				err = dydb.PutItem(inputItem)
 				if err != nil {
 					log.Error("unable to put item Error - ", instanceID, err)
+					log.WithFields(log.Fields{
+						"input": inputItem,
+					}).Error("unable to put item Error!")
+				}
+			}
+
+			// AURORA ACTION
+			setEngine = "aurora"
+			inputa := &rds.DescribeDBClustersInput{
+				Filters: []*rds.Filter{
+					{
+						Name: aws.String("engine"),
+						Values: []*string{
+							aws.String(setEngine),
+						},
+					},
+				},
+			}
+			resulta, err := rdssvc.DescribeDBClusters(inputa)
+			if err != nil {
+				log.Error("unable to fetch all instances - ", instanceID, err)
+				actionType = "Startall-error"
+			}
+			for _, i := range resulta.DBClusters {
+				listClusterIDs = append(listInstanceIDs, *i.DBClusterIdentifier)
+			}
+
+			log.Info("Clusters list to action - ", listClusterIDs)
+			for _, i := range listClusterIDs {
+				getCurrentTime = GetCurrentTime()
+				getUUID = GetUUID()
+				input := &rds.StartDBClusterInput{
+					DBClusterIdentifier: &i,
+				}
+				_, err = rdssvc.StartDBCluster(input)
+				if err != nil {
+					log.Error("unable to Startall cluster Error - ", i, err)
+					actionType = "Startall-error"
+				}
+				inputItem := dydb.Item{
+					UUID:         getUUID,
+					DbIdentifier: i,
+					Status:       actionType,
+					CreatedAt:    getCurrentTime,
+					Error:        err.Error(),
+				}
+				err = dydb.PutItem(inputItem)
+				if err != nil {
+					log.Error("unable to put item Error - ", i, err)
 					log.WithFields(log.Fields{
 						"input": inputItem,
 					}).Error("unable to put item Error!")
