@@ -206,8 +206,11 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 				log.Error("unable to fetch all instances - ", instanceID, err)
 				actionType = "stopall-error"
 			}
+
+			log.Info(resulta)
+
 			for _, i := range resulta.DBClusters {
-				listClusterIDs = append(listInstanceIDs, *i.DBClusterIdentifier)
+				listClusterIDs = append(listClusterIDs, *i.DBClusterIdentifier)
 			}
 
 			log.Info("Clusters list to action - ", listClusterIDs)
@@ -311,7 +314,7 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 				actionType = "Startall-error"
 			}
 			for _, i := range resulta.DBClusters {
-				listClusterIDs = append(listInstanceIDs, *i.DBClusterIdentifier)
+				listClusterIDs = append(listClusterIDs, *i.DBClusterIdentifier)
 			}
 
 			log.Info("Clusters list to action - ", listClusterIDs)
