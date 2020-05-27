@@ -1,7 +1,7 @@
 # aws-golang-rds-start-stop-serverless-api
 
 ##### AWS Golang serverless API using AWS using SAM to support APIs using API gateway & Lambda to support starting/stopping of RDS instances.
-##### support - Postgres & Aurora-Postgres engines.
+##### support - 100 instances(Postgres & Aurora-Postgres engines)
 ##### Make sure your CLI session has authorized access to AWS account.
 
 #### 1. Export necessary variables
