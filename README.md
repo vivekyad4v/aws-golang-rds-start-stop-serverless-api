@@ -32,15 +32,39 @@ You will get the API Gateway URL in the outputs something as below -
 
 Check your APIs on above URL using curl -
 
+Stop/Start specific instances - 
 ```
-    curl https://hahft1bb2c.execute-api.ap-south-1.amazonaws.com/uat/hello
-    curl https://hahft1bb2c.execute-api.ap-south-1.amazonaws.com/uat/stores/store?type=grocery
-    curl https://hahft1bb2c.execute-api.ap-south-1.amazonaws.com/uat/stores/store?type=fruit
-    curl https://hahft1bb2c.execute-api.ap-south-1.amazonaws.com/uat/stores/store?type=all
-    curl https://hahft1bb2c.execute-api.ap-south-1.amazonaws.com/uat/stores/store?type=doesnotexist
-    curl https://hahft1bb2c.execute-api.ap-south-1.amazonaws.com/uat/whateverthrowerror
-    
+export action=stop #can be stop/start 
+export dbidentifier=a #can accept multiple values, comma separated
+JSON_STRING='{"type":"'"${action}"'","values":["'"${dbidentifier}"'"]}'
+
+curl -X POST -H 'Content-Type: application/json' \
+-H "Authorization: $token" \
+--data "$JSON_STRING" \
+https://dunhamxtai.execute-api.ap-south-1.amazonaws.com/uat/rdst/action
 ```
+
+StopAll instances - 
+```
+JSON_STRING='{"type":"'"${action}"'","values":["'"once"'"]}'
+
+curl -X POST -H 'Content-Type: application/json' \
+-H "Authorization: $token" \
+--data "$JSON_STRING" \
+https://hahft1bb2c.execute-api.ap-south-1.amazonaws.com/uat
+```
+
+StartAll instances - 
+```
+JSON_STRING='{"type":"'"${action}"'","values":["'"once"'"]}'
+
+curl -X POST -H 'Content-Type: application/json' \
+-H "Authorization: $token" \
+--data "$JSON_STRING" \
+https://hahft1bb2c.execute-api.ap-south-1.amazonaws.com/uat
+
+```
+
 
 Note - You can check application logs in Cloudwatch.
 
