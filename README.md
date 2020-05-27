@@ -1,8 +1,6 @@
-# aws-golang-serverless-basic-api
+# aws-golang-rds-start-stop-serverless-api
 
-##### CICD Golang serverless API on AWS using SAM
-
-##### This tutorial creates a Cloudformation stack, API gateway & two Lambda functions(Hello World & Stores) for demo purpose.
+##### AWS Golang serverless API using AWS using SAM to support APIs using API gateway & Lambda to support starting/stopping of RDS instances.
 
 ##### Make sure your CLI session has authorized access to AWS account.
 
