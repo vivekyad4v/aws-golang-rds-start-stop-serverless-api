@@ -32,7 +32,7 @@ Check your APIs on above URL using curl -
 
 Stop/Start specific instances - 
 ```
-export action=stop #can be stop/start 
+export action=stop #can be stop/start/stopall/startall 
 export dbidentifier=a #can accept multiple values, comma separated
 JSON_STRING='{"type":"'"${action}"'","values":["'"${dbidentifier}"'"]}'
 
