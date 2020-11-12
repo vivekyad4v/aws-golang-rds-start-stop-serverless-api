@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"rdst/dydb"
+	"rdst/utils"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go/aws"
@@ -23,6 +24,7 @@ var (
 	listInstanceIDs []string
 	listClusterIDs  []string
 	setEngine       string
+	instancesToSkip []string
 )
 
 // BodyRequest requested json file
@@ -135,6 +137,8 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 		}
 
 	case "stopall", "startall":
+		instancesToSkip = []string{"matrix-uat", "hpy-uat-api-platform-rds"}
+
 		if actionType == "stopall" {
 			// POSTGRES ACTION
 			setEngine = "postgres"
@@ -157,6 +161,13 @@ func ActionDBInstance(instanceID string, actionType string) (Error error) {
 			for _, i := range result.DBInstances {
 				listInstanceIDs = append(listInstanceIDs, *i.DBInstanceIdentifier)
 			}
+
+			log.Info("actual list", listInstanceIDs)
+			log.Info("To skip list", instancesToSkip)
+			for _, v := range instancesToSkip {
+				listInstanceIDs = utils.RemoveFromSlice(listInstanceIDs, v)
+			}
+			log.Info("after skip list", listInstanceIDs)
 
 			log.Info("Instance list to action - ", listInstanceIDs)
 			for _, i := range listInstanceIDs {
